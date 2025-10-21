@@ -9,6 +9,8 @@ import com.mycompany.bidverse.client.dto.ImagesDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.core.type.TypeReference;
+import java.util.Map;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -202,20 +204,33 @@ public class BidverseAPIClient {
     /**
  * GET /auction/{auctionId}/highest - Fetches the highest bid for a specific auction.
  */
-public Optional<BidDto> getHighestBid(Long auctionId) {
+/**
+ * GET /auctions/{auctionId}/highest-bid - Gets the highest bid for an auction
+ */
+/**
+ * GET /bids/auction/{auctionId}/highest - Gets the highest bid for an auction
+ */
+public Double getHighestBid(Long auctionId) {
     try {
-        System.out.println("API Client: Fetching highest bid for auction ID " + auctionId);
+        System.out.println("API Client: Getting highest bid for auction " + auctionId);
         String json = sendRequest("/bids/auction/" + auctionId + "/highest", "GET", null);
-        BidDto result = parseJsonToObject(json, BidDto.class);
-        return Optional.ofNullable(result);
+        
+        if (json != null && !json.trim().isEmpty() && !json.equals("null")) {
+            // Parse the BidDto object and extract the bid amount
+            BidDto highestBidDto = parseJsonToObject(json, BidDto.class);
+            if (highestBidDto != null && highestBidDto.getBidAmount() != null) {
+                Double highestBid = highestBidDto.getBidAmount().doubleValue();
+                System.out.println("Found highest bid: " + highestBid);
+                return highestBid;
+            }
+        }
+        
+        System.out.println("No highest bid found for auction " + auctionId);
+        return null;
+        
     } catch (Exception e) {
-        System.err.println("API Client Failed to fetch highest bid for auction " + auctionId + ". Falling back to dummy data. Error: " + e.getMessage());
-        // Optional fallback: return dummy bid with zero amount
-        BidDto dummyBid = new BidDto();
-        dummyBid.setAuctionItemId(auctionId);
-        dummyBid.setBidAmount(BigDecimal.ZERO);
-        dummyBid.status = "No Bids";
-        return Optional.of(dummyBid);
+        System.err.println("API Client Failed to get highest bid: " + e.getMessage());
+        return null;
     }
 }
 
