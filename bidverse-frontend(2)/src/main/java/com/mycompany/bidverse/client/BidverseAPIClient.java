@@ -1,5 +1,6 @@
 package com.mycompany.bidverse.client;
 
+import com.mycompany.bidverse.AuthService;
 import com.mycompany.bidverse.client.dto.AuctionItemDto;
 import com.mycompany.bidverse.client.dto.BidDto;
 import com.mycompany.bidverse.client.dto.BidderDto;
@@ -15,6 +16,7 @@ import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.security.AuthProvider;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -202,6 +204,7 @@ public class BidverseAPIClient {
      */
     public List<BidDto> getMyBids(Long bidderId) {
         try {
+
             System.out.println("API Client: Fetching bids for bidder " + bidderId);
             String json = sendRequest("/bids/bidder/" + bidderId, "GET", null);
             return parseJsonToList(json, BidDto.class);
@@ -221,7 +224,7 @@ public class BidverseAPIClient {
     public List<BidDto> getWonBids(Long bidderId) {
         try {
             System.out.println("API Client: Fetching won auctions for bidder " + bidderId);
-            String json = sendRequest("/bids/won/" + bidderId, "GET", null);
+            String json = sendRequest("/auction/bidder/won/" + AuthService.getCurrentBidderId(), "GET", null);
             return parseJsonToList(json, BidDto.class);
         } catch (Exception e) {
             System.err.println("API Client Failed to fetch won bids. Falling back to dummy data. Error: " + e.getMessage());

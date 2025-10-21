@@ -1,5 +1,4 @@
 package com.mycompany.bidverse;
-
 import javax.swing.*;
 
 /**
@@ -74,8 +73,15 @@ public class SellerRegisterPage extends JPanel {
         String shop = shopField.getText().trim();
         String address = addressField.getText().trim();
 
-        if (name.isEmpty() || email.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Name, email and password are required", "Validation",
+        if (name.isEmpty() || email.isEmpty() || password.isEmpty() || shop.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Name, email ,shopname and password are required", "Validation",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        String emailRegex = "^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+$";
+        if (!email.matches(emailRegex)) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid email address.", "Invalid Email",
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
