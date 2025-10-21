@@ -3,6 +3,7 @@ package com.mycompany.bidverse.client;
 import com.mycompany.bidverse.client.dto.AuctionItemDto;
 import com.mycompany.bidverse.client.dto.BidDto;
 import com.mycompany.bidverse.client.dto.BidderDto;
+import com.mycompany.bidverse.client.dto.ImagesDto;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -268,5 +269,21 @@ public class BidverseAPIClient {
         bid.setBidAmount(amount);
         bid.status = status;
         return bid;
+   }
+
+ /* GET /images/auction/{auctionId} - Fetches all images for a specific auction.
+ */
+public List<ImagesDto> getImagesByAuction(Long auctionId) {
+    try {
+        System.out.println("API Client: Fetching images for auction ID " + auctionId);
+        String json = sendRequest("/images/auction/" + auctionId, "GET", null);
+        List<ImagesDto> result = parseJsonToList(json, ImagesDto.class);
+        return result;
+    } catch (Exception e) {
+        System.err.println("API Client Failed to fetch images for auction " + auctionId + ". Error: " + e.getMessage());
+        // Return empty list instead of dummy data
+        return new ArrayList<>();
     }
+}
+
 }

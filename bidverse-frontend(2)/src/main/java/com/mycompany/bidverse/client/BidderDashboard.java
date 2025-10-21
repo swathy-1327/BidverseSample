@@ -1,10 +1,10 @@
 package com.mycompany.bidverse.client;
-
 import com.mycompany.bidverse.AuthService;
 import com.mycompany.bidverse.MainFrame;
 import com.mycompany.bidverse.client.dto.AuctionItemDto;
 import com.mycompany.bidverse.client.dto.BidDto;
 import com.mycompany.bidverse.client.dto.BidderDto;
+import com.mycompany.bidverse.client.dto.ImagesDto;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -12,6 +12,7 @@ import java.awt.*;
 import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import java.math.BigDecimal;
+import java.net.URL;
 import java.text.NumberFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,6 +40,8 @@ public class BidderDashboard extends JPanel {
     private JLabel detailHighestBid;
     private JLabel detailEndsIn;
     private JLabel statusLabel;
+    private JPanel imagePanel;
+    private JLabel imageLabel;
 
     // UI component for bid amount
     private JTextField bidAmountField;
@@ -351,38 +354,113 @@ public class BidderDashboard extends JPanel {
     }
 
     private void fetchAndDisplayAuctions() {
-        // Real API call is now expected here
-        new Thread(() -> {
-            try {
-                // 1. Make the REAL API call using the implemented client
-                List<AuctionItemDto> auctions = apiClient.getAllAuctions();
+    new Thread(() -> {
+        try {
+            // 1. Make the REAL API call using the implemented client
+            List<AuctionItemDto> auctions = apiClient.getAllAuctions();
 
-                // 2. Update the Swing components on the Event Dispatch Thread (EDT)
-                SwingUtilities.invokeLater(() -> {
-                    auctionListModel.clear();
-                    auctionMap.clear();
+            // 2. Update the Swing components on the Event Dispatch Thread (EDT)
+            SwingUtilities.invokeLater(() -> {
+                auctionListModel.clear();
+                auctionMap.clear();
 
-                    for (AuctionItemDto auction : auctions) {
-                        // Assuming getStatus() returns "OPEN" or "CLOSED" string
-                        if ("OPEN".equalsIgnoreCase(auction.getStatus())) {
-                            auctionListModel.addElement(auction.getTitle());
-                            auctionMap.put(auction.getTitle(), auction);
-                        }
+                for (AuctionItemDto auction : auctions) {
+                    if ("OPEN".equalsIgnoreCase(auction.getStatus())) {
+                        auctionListModel.addElement(auction.getTitle());
+                        auctionMap.put(auction.getTitle(), auction);
                     }
+                }
 
-                    if (!auctionListModel.isEmpty()) {
-                        auctionJList.setSelectedIndex(0);
-                        showSelectedAuctionDetails();
-                    }
-                });
-            } catch (Exception ex) {
-                ex.printStackTrace();
-                SwingUtilities.invokeLater(() ->
-                    JOptionPane.showMessageDialog(this, "Failed to fetch auctions. Check API client configuration: " + ex.getMessage(), "API Error", JOptionPane.ERROR_MESSAGE)
-                );
-            }
-        }).start();
+                if (!auctionListModel.isEmpty()) {
+                    auctionJList.setSelectedIndex(0);
+                    showSelectedAuctionDetails();
+                }
+            });
+
+            // 3. Pre-load images for all auctions in the background
+            preloadAuctionImages(auctions);
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            SwingUtilities.invokeLater(() ->
+                JOptionPane.showMessageDialog(this, "Failed to fetch auctions. Check API client configuration: " + ex.getMessage(), "API Error", JOptionPane.ERROR_MESSAGE)
+            );
+        }
+    }).start();
+}
+
+private void preloadAuctionImages(List<AuctionItemDto> auctions) {
+    for (AuctionItemDto auction : auctions) {
+        if ("OPEN".equalsIgnoreCase(auction.getStatus())) {
+            loadAuctionImage(auction.getAuctionId(), auction.getTitle());
+        }
     }
+}
+
+private void loadAuctionImage(Long auctionId, String auctionTitle) {
+    new Thread(() -> {
+        try {
+            List<ImagesDto> images = apiClient.getImagesByAuction(auctionId);
+            
+            SwingUtilities.invokeLater(() -> {
+                // Update the image display if this auction is currently selected
+                String currentSelection = auctionJList.getSelectedValue();
+                if (currentSelection != null && currentSelection.equals(auctionTitle)) {
+                    displayAuctionImage(images);
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Failed to load images for auction " + auctionId + ": " + e.getMessage());
+        }
+    }).start();
+}
+
+private void displayAuctionImage(List<ImagesDto> images) {
+    if (images == null || images.isEmpty()) {
+        imageLabel.setIcon(null);
+        imageLabel.setText("No image available");
+        return;
+    }
+
+    // Use the first image
+    ImagesDto firstImage = images.get(0);
+    String filePath = firstImage.getFilePath();
+    
+    if (filePath == null || filePath.trim().isEmpty()) {
+        imageLabel.setIcon(null);
+        imageLabel.setText("No image available");
+        return;
+    }
+
+    // Try to load and display the image
+    new Thread(() -> {
+        try {
+            // Construct full URL for the image
+            String imageUrl = "http://localhost:8080" + filePath;
+            URL url = new URL(imageUrl);
+            ImageIcon imageIcon = new ImageIcon(url);
+            
+            SwingUtilities.invokeLater(() -> {
+                if (imageIcon.getImageLoadStatus() == MediaTracker.COMPLETE) {
+                    // Scale image to fit the display area
+                    Image image = imageIcon.getImage();
+                    Image scaledImage = image.getScaledInstance(280, 150, Image.SCALE_SMOOTH);
+                    imageLabel.setIcon(new ImageIcon(scaledImage));
+                    imageLabel.setText("");
+                } else {
+                    imageLabel.setIcon(null);
+                    imageLabel.setText("Image load failed");
+                }
+            });
+        } catch (Exception e) {
+            SwingUtilities.invokeLater(() -> {
+                imageLabel.setIcon(null);
+                imageLabel.setText("No image available");
+            });
+        }
+    }).start();
+}
+
 
     private void refreshSelectedAuctionDetails() {
         String selectedTitle = auctionJList.getSelectedValue();
@@ -410,39 +488,53 @@ public class BidderDashboard extends JPanel {
 
     private JPanel createBrowsePanel() {
         JPanel browsePanel = new RoundedPanel(25, new Color(255, 255, 255, 220));
-        browsePanel.setLayout(new BorderLayout(20, 20));
-        browsePanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+    browsePanel.setLayout(new BorderLayout(20, 20));
+    browsePanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JLabel heading = new JLabel("Available Auctions");
-        heading.setFont(new Font("Segoe UI", Font.BOLD, 28));
-        heading.setForeground(new Color(30, 30, 30));
-        browsePanel.add(heading, BorderLayout.NORTH);
+    JLabel heading = new JLabel("Available Auctions");
+    heading.setFont(new Font("Segoe UI", Font.BOLD, 28));
+    heading.setForeground(new Color(30, 30, 30));
+    browsePanel.add(heading, BorderLayout.NORTH);
 
-        auctionListModel = new DefaultListModel<>();
-        auctionJList = new JList<>(auctionListModel);
-        auctionJList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        auctionJList.setFont(new Font("Segoe UI", Font.PLAIN, 18));
-        JScrollPane scrollPane = new JScrollPane(auctionJList);
-        browsePanel.add(scrollPane, BorderLayout.CENTER);
+    auctionListModel = new DefaultListModel<>();
+    auctionJList = new JList<>(auctionListModel);
+    auctionJList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+    auctionJList.setFont(new Font("Segoe UI", Font.PLAIN, 18));
+    JScrollPane scrollPane = new JScrollPane(auctionJList);
+    browsePanel.add(scrollPane, BorderLayout.CENTER);
 
-        // Details panel below
-        JPanel detailPanel = new RoundedPanel(18, new Color(255, 255, 255, 230));
-        detailPanel.setLayout(new BoxLayout(detailPanel, BoxLayout.Y_AXIS));
-        detailPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
+    // Details panel below
+    JPanel detailPanel = new RoundedPanel(18, new Color(255, 255, 255, 230));
+    detailPanel.setLayout(new BoxLayout(detailPanel, BoxLayout.Y_AXIS));
+    detailPanel.setBorder(new EmptyBorder(20, 20, 20, 20));
 
-        detailTitle = new JLabel("Select an auction to view details");
-        detailTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        detailPanel.add(detailTitle);
-        detailPanel.add(Box.createVerticalStrut(12));
+    detailTitle = new JLabel("Select an auction to view details");
+    detailTitle.setFont(new Font("Segoe UI", Font.BOLD, 22));
+    detailPanel.add(detailTitle);
+    detailPanel.add(Box.createVerticalStrut(12));
 
-        detailDesc = new JTextArea();
-        detailDesc.setFont(new Font("Segoe UI", Font.PLAIN, 16));
-        detailDesc.setEditable(false);
-        detailDesc.setLineWrap(true);
-        detailDesc.setWrapStyleWord(true);
-        detailDesc.setOpaque(false);
-        detailPanel.add(detailDesc);
-        detailPanel.add(Box.createVerticalStrut(12));
+    // Image display panel
+    imagePanel = new JPanel(new BorderLayout());
+    imagePanel.setOpaque(false);
+    imagePanel.setPreferredSize(new Dimension(300, 200));
+    imagePanel.setMaximumSize(new Dimension(300, 200));
+    imageLabel = new JLabel("No image available", JLabel.CENTER);
+    imageLabel.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+    imageLabel.setForeground(Color.GRAY);
+    imageLabel.setVerticalTextPosition(JLabel.BOTTOM);
+    imageLabel.setHorizontalTextPosition(JLabel.CENTER);
+    imagePanel.add(imageLabel, BorderLayout.CENTER);
+    detailPanel.add(imagePanel);
+    detailPanel.add(Box.createVerticalStrut(12));
+
+    detailDesc = new JTextArea();
+    detailDesc.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+    detailDesc.setEditable(false);
+    detailDesc.setLineWrap(true);
+    detailDesc.setWrapStyleWord(true);
+    detailDesc.setOpaque(false);
+    detailPanel.add(detailDesc);
+    detailPanel.add(Box.createVerticalStrut(12));
 
         // Info Labels
         JPanel infoBar = new JPanel(new GridLayout(2, 2, 10, 6));
@@ -492,39 +584,34 @@ public class BidderDashboard extends JPanel {
     }
 
     private void showSelectedAuctionDetails() {
-        String key = auctionJList.getSelectedValue();
-        if (key == null) return;
+    String key = auctionJList.getSelectedValue();
+    if (key == null) return;
 
-        AuctionItemDto dto = auctionMap.get(key);
-        if (dto == null) return;
+    AuctionItemDto dto = auctionMap.get(key);
+    if (dto == null) return;
 
-        this.currentAuctionId = dto.getAuctionId();
-        System.out.println(currentAuctionId+"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+    this.currentAuctionId = dto.getAuctionId();
+    System.out.println(currentAuctionId + "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
 
-        showDetailsFromDto(dto);
-    }
+    showDetailsFromDto(dto);
+    
+    // Load and display images for the selected auction
+    loadAuctionImage(currentAuctionId, key);
+}
 
-    private void showDetailsFromDto(AuctionItemDto dto) {
-        detailTitle.setText(dto.getTitle());
-        detailDesc.setText(dto.getDescription());
+private void showDetailsFromDto(AuctionItemDto dto) {
+    detailTitle.setText(dto.getTitle());
+    detailDesc.setText(dto.getDescription());
 
-        // FIX 1: Convert Double to BigDecimal for formatting
-        detailBasePrice.setText("Base: " + formatCurrency(BigDecimal.valueOf(dto.getBasePrice())));
+    // Show loading text while image loads
+    imageLabel.setIcon(null);
+    imageLabel.setText("Loading image...");
 
-        // FIX 2: Convert Double from the highestBid field to BigDecimal
-        detailHighestBid.setText("Highest: " + formatCurrency(BigDecimal.valueOf(dto.getHighestBid())));
-
-        // FIX 3: Use the endsIn string
-        detailEndsIn.setText("Ends in: " + dto.getEndsIn());
-
-        statusLabel.setText("Status: " + dto.getStatus());
-    }
-
-    // Helper for currency formatting
-    private String formatCurrency(BigDecimal amount) {
-        NumberFormat nf = NumberFormat.getCurrencyInstance();
-        return nf.format(amount);
-    }
+    detailBasePrice.setText("Base: " + formatCurrency(BigDecimal.valueOf(dto.getBasePrice())));
+    detailHighestBid.setText("Highest: " + formatCurrency(BigDecimal.valueOf(dto.getHighestBid())));
+    detailEndsIn.setText("Ends in: " + dto.getEndsIn());
+    statusLabel.setText("Status: " + dto.getStatus());
+}
 
     private void placeBidFlow() {
         System.out.println(AuthService.getCurrentBidderId()+"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
@@ -656,6 +743,14 @@ public class BidderDashboard extends JPanel {
         l.setOpaque(false);
         return l;
     }
+
+    private String formatCurrency(BigDecimal amount) {
+    if (amount == null) {
+        return "$0.00";
+    }
+    NumberFormat nf = NumberFormat.getCurrencyInstance();
+    return nf.format(amount);
+}
 
     private BufferedImage generateFakeQRImage(Long auctionId, BigDecimal amount, int sizePx) {
         int cells = 21;
