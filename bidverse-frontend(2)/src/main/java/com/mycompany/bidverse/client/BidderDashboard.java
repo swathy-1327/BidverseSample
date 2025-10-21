@@ -22,6 +22,7 @@ import java.util.Random;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.HashMap;
 
 import com.mycompany.bidverse.client.dto.AuctionItemDto;
 
@@ -54,6 +55,8 @@ public class BidderDashboard extends JPanel {
     private Long currentBidderId=AuthService.getCurrentBidderId();
     private String currentBidderName;
     private Long currentAuctionId;
+    private final Map<Long, ImageIcon> auctionImageCache = new HashMap<>();
+
     
     // Timer for refreshing details
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
@@ -159,7 +162,7 @@ public class BidderDashboard extends JPanel {
         });
 
         // Start a scheduled task to refresh auction details every 5 seconds
-        scheduler.scheduleWithFixedDelay(this::refreshSelectedAuctionDetails, 0, 5, TimeUnit.SECONDS);
+        scheduler.scheduleWithFixedDelay(this::refreshSelectedAuctionDetails, 0, 150, TimeUnit.SECONDS);
     }
 
     public void setBidderInfo(Long bidderId, String bidderEmail, String bidderName) {
@@ -413,22 +416,69 @@ private void preloadAuctionImages(List<AuctionItemDto> auctions) {
 }
 
 private void loadAuctionImage(Long auctionId, String auctionTitle) {
+    // If image is already cached, display it immediately
+    if (auctionImageCache.containsKey(auctionId)) {
+        imageLabel.setIcon(auctionImageCache.get(auctionId));
+        imageLabel.setText("");
+        return;
+    }
+
+    // Otherwise, fetch in background
     new Thread(() -> {
         try {
             List<ImagesDto> images = apiClient.getImagesByAuction(auctionId);
+            if (images == null || images.isEmpty()) {
+                SwingUtilities.invokeLater(() -> {
+                    imageLabel.setIcon(null);
+                    imageLabel.setText("No image available");
+                });
+                return;
+            }
+
+            ImagesDto firstImage = images.get(0);
+            String filePath = firstImage.getFilePath();
+            if (filePath == null || filePath.trim().isEmpty()) {
+                SwingUtilities.invokeLater(() -> {
+                    imageLabel.setIcon(null);
+                    imageLabel.setText("No image available");
+                });
+                return;
+            }
+
+            String imageUrl = "http://localhost:8080" + filePath;
+            System.out.println("Loading image from: " + imageUrl);
+
+            ImageIcon rawIcon = new ImageIcon(new URL(imageUrl));
             
+            // Wait until image is fully loaded
+            Image img = rawIcon.getImage();
+            MediaTracker tracker = new MediaTracker(imageLabel);
+            tracker.addImage(img, 0);
+            tracker.waitForID(0);
+
+            Image scaled = img.getScaledInstance(280, 150, Image.SCALE_SMOOTH);
+            ImageIcon scaledIcon = new ImageIcon(scaled);
+
+            auctionImageCache.put(auctionId, scaledIcon);
+
             SwingUtilities.invokeLater(() -> {
-                // Update the image display if this auction is currently selected
-                String currentSelection = auctionJList.getSelectedValue();
-                if (currentSelection != null && currentSelection.equals(auctionTitle)) {
-                    displayAuctionImage(images);
+                // Only show if still selected
+                if (auctionId.equals(currentAuctionId)) {
+                    imageLabel.setIcon(scaledIcon);
+                    imageLabel.setText("");
                 }
             });
+
         } catch (Exception e) {
-            System.err.println("Failed to load images for auction " + auctionId + ": " + e.getMessage());
+            SwingUtilities.invokeLater(() -> {
+                imageLabel.setIcon(null);
+                imageLabel.setText("Failed to load image");
+            });
+            e.printStackTrace();
         }
     }).start();
 }
+
 
 private void displayAuctionImage(List<ImagesDto> images) {
     if (images == null || images.isEmpty()) {
