@@ -87,6 +87,7 @@ public class LoginPage extends JPanel {
             Main.email = email;
             Main.idInitialize();
             String userRole = AuthService.getCurrentUserRole();
+            System.out.print(userRole+"555555555555555");
 
             // Clear fields after successful login
             emailField.setText("");
@@ -101,8 +102,11 @@ public class LoginPage extends JPanel {
                 Long bidderId = AuthService.getCurrentUserId();
                 String bidderEmail = AuthService.getCurrentUserEmail();
                 String bidderName = AuthService.getCurrentUserName();
-                Optional<BidderDto> profileOpt = apiClient.getBidderProfileByEmail(AuthService.getCurrentUserEmail());
-                Long temp=profileOpt.get().getId();
+                System.out.println("Looking up bidder profile for email: " + bidderEmail);
+                Optional<BidderDto> profileOpt = apiClient.getBidderProfileByEmail(bidderEmail);
+                BidderDto bidder =profileOpt.get();
+                
+                Long temp=bidder.getBidderId();
                 System.out.println("Bidder ID from profile: " + temp);
                 AuthService.setCurrentBidderId(temp);
                 System.out.println("Bidder ID after setting: " + AuthService.getCurrentBidderId());

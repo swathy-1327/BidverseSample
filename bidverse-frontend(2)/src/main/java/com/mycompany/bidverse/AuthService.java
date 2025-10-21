@@ -87,6 +87,7 @@ public class AuthService {
                 }
                 if (userName != null) {
                     currentUserName = userName;
+                    System.out.println("oooooooooo"+currentUserName);
                 }
 
                 return currentUserRole != null; // Login succeeded if we got a role
