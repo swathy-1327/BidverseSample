@@ -140,133 +140,155 @@ public class SellerCurrentBids extends JPanel {
     }
 
     // --- AUCTION DETAILS WINDOW ---
-    private void openAuctionDetailsWindow(Long auctionId) {
-        JDialog detailDialog = new JDialog(mainFrame, "Auction Details (ID: " + auctionId + ")", true);
-        detailDialog.setLayout(new BorderLayout(10, 10));
-        detailDialog.setSize(560, 520);
-        detailDialog.setLocationRelativeTo(mainFrame);
+    // --- AUCTION DETAILS WINDOW ---
+private void openAuctionDetailsWindow(Long auctionId) {
+    JDialog detailDialog = new JDialog(mainFrame, "Auction Details (ID: " + auctionId + ")", true);
+    detailDialog.setLayout(new BorderLayout(10, 10));
+    detailDialog.setSize(600, 580);
+    detailDialog.setLocationRelativeTo(mainFrame);
 
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setBackground(PANEL_BG);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(8, 8, 8, 8);
-        gbc.anchor = GridBagConstraints.WEST;
+    JPanel panel = new JPanel(new GridBagLayout());
+    panel.setBackground(PANEL_BG);
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.insets = new Insets(8, 8, 8, 8);
+    gbc.anchor = GridBagConstraints.WEST;
 
-        BackendClient.getAuctionById(auctionId).ifPresentOrElse(auction -> {
-            JTextField titleField = new JTextField(auction.title(), 20);
-            JTextField categoryField = new JTextField(auction.category(), 20);
-            JTextArea descriptionArea = new JTextArea(auction.description(), 3, 20);
-            JTextField startTimeField = new JTextField(auction.startTime(), 15);
-            JTextField endTimeField = new JTextField(auction.endTime(), 15);
-            JTextField basePriceField = new JTextField(String.valueOf(auction.basePrice()), 10);
+    BackendClient.getAuctionById(auctionId).ifPresentOrElse(auction -> {
+        JTextField titleField = new JTextField(auction.title(), 20);
+        JTextField categoryField = new JTextField(auction.category(), 20);
+        JTextArea descriptionArea = new JTextArea(auction.description(), 3, 20);
+        JTextField startTimeField = new JTextField(auction.startTime(), 15);
+        JTextField endTimeField = new JTextField(auction.endTime(), 15);
+        JTextField basePriceField = new JTextField(String.valueOf(auction.basePrice()), 10);
 
-            java.util.concurrent.atomic.AtomicInteger row = new java.util.concurrent.atomic.AtomicInteger(0);
-            var helper = new Object() {
-                void addField(String labelText, JComponent comp) {
-                    JLabel label = new JLabel(labelText);
-                    label.setFont(new Font("Segoe UI", Font.BOLD, 13));
-                    label.setForeground(PRIMARY_PURPLE);
+        JTextField imagePathField = new JTextField(20);
+        imagePathField.setEditable(false);
+        JButton browseButton = new JButton("Browse");
+        styleSecondaryButton(browseButton, ACCENT_PURPLE);
+        browseButton.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            int result = fileChooser.showOpenDialog(detailDialog);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                imagePathField.setText(fileChooser.getSelectedFile().getAbsolutePath());
+            }
+        });
 
-                    gbc.gridx = 0;
-                    gbc.gridy = row.get();
-                    panel.add(label, gbc);
+        JPanel imagePanel = new JPanel(new BorderLayout(5, 0));
+        imagePanel.setBackground(PANEL_BG);
+        imagePanel.add(imagePathField, BorderLayout.CENTER);
+        imagePanel.add(browseButton, BorderLayout.EAST);
 
-                    gbc.gridx = 1;
-                    gbc.fill = GridBagConstraints.HORIZONTAL;
-                    if (comp instanceof JScrollPane) {
-                        comp.setPreferredSize(new Dimension(250, 70));
-                    }
-                    panel.add(comp, gbc);
-                    gbc.fill = GridBagConstraints.NONE;
-                    row.incrementAndGet();
-                }
-            };
+        java.util.concurrent.atomic.AtomicInteger row = new java.util.concurrent.atomic.AtomicInteger(0);
+        var helper = new Object() {
+            void addField(String labelText, JComponent comp) {
+                JLabel label = new JLabel(labelText);
+                label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                label.setForeground(PRIMARY_PURPLE);
 
-            helper.addField("Item Name:", titleField);
-            helper.addField("Category:", categoryField);
-            helper.addField("Description:", new JScrollPane(descriptionArea));
-            helper.addField("Start Time:", startTimeField);
-            helper.addField("End Time:", endTimeField);
-            helper.addField("Base Price:", basePriceField);
+                gbc.gridx = 0;
+                gbc.gridy = row.get();
+                panel.add(label, gbc);
 
-            List<BackendClient.ImagesDto> images = BackendClient.getImagesByAuction(auctionId);
-            String imagePaths = images.stream().map(BackendClient.ImagesDto::filePath)
-                    .collect(Collectors.joining(", "));
-            helper.addField("Image Paths:", new JLabel(imagePaths));
+                gbc.gridx = 1;
+                gbc.fill = GridBagConstraints.HORIZONTAL;
+                panel.add(comp, gbc);
+                gbc.fill = GridBagConstraints.NONE;
+                row.incrementAndGet();
+            }
+        };
 
-            detailDialog.add(new JScrollPane(panel), BorderLayout.CENTER);
+        helper.addField("Item Name:", titleField);
+        helper.addField("Category:", categoryField);
+        helper.addField("Description:", new JScrollPane(descriptionArea));
+        helper.addField("Start Time:", startTimeField);
+        helper.addField("End Time:", endTimeField);
+        helper.addField("Base Price:", basePriceField);
+        helper.addField("Upload New Image:", imagePanel);
 
-            // --- BUTTONS ---
-            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
-            buttonPanel.setBackground(BACKGROUND_COLOR);
+        detailDialog.add(new JScrollPane(panel), BorderLayout.CENTER);
 
-            JButton updateButton = new JButton("Update Auction");
-            JButton deleteButton = new JButton("Delete Auction");
-            JButton endBidButton = new JButton("End Bid");
+        // --- BUTTONS ---
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 15, 10));
+        buttonPanel.setBackground(BACKGROUND_COLOR);
 
-            stylePrimaryButton(updateButton);
-            styleSecondaryButton(deleteButton, DELETE_COLOR);
-            styleSecondaryButton(endBidButton, END_BID_COLOR);
+        JButton updateButton = new JButton("Update Auction");
+        JButton deleteButton = new JButton("Delete Auction");
+        JButton endBidButton = new JButton("End Bid");
 
-            updateButton.addActionListener(e -> {
-                try {
-                    BackendClient.AuctionItemDto updatedDto = new BackendClient.AuctionItemDto(
-                            auctionId, titleField.getText(), Double.parseDouble(basePriceField.getText()),
-                            categoryField.getText(), descriptionArea.getText(), auction.status(),
-                            Main.sell_id, auction.winnerId(), startTimeField.getText(), endTimeField.getText());
+        stylePrimaryButton(updateButton);
+        styleSecondaryButton(deleteButton, DELETE_COLOR);
+        styleSecondaryButton(endBidButton, END_BID_COLOR);
 
-                    BackendClient.updateAuction(auctionId, updatedDto).ifPresentOrElse(
-                            res -> {
+        updateButton.addActionListener(e -> {
+            try {
+                BackendClient.AuctionItemDto updatedDto = new BackendClient.AuctionItemDto(
+                        auctionId, titleField.getText(), Double.parseDouble(basePriceField.getText()),
+                        categoryField.getText(), descriptionArea.getText(), auction.status(),
+                        Main.sell_id, auction.winnerId(), startTimeField.getText(), endTimeField.getText());
+
+                BackendClient.updateAuction(auctionId, updatedDto).ifPresentOrElse(
+                        res -> {
+                            String imgPath = imagePathField.getText();
+                            if (imgPath != null && !imgPath.trim().isEmpty()) {
+                                boolean imgUploaded = BackendClient.uploadImage(imgPath, auctionId);
+                                if (imgUploaded) {
+                                    showMessageDialog(detailDialog, "Auction updated and image uploaded successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                                } else {
+                                    showMessageDialog(detailDialog, "Auction updated, but image upload failed.", "Warning", JOptionPane.WARNING_MESSAGE);
+                                }
+                            } else {
                                 showMessageDialog(detailDialog, "Auction updated successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-                                loadCurrentBids();
-                            },
-                            () -> showMessageDialog(detailDialog, "Failed to update auction.", "Error", JOptionPane.ERROR_MESSAGE)
-                    );
-                } catch (NumberFormatException ex) {
-                    showMessageDialog(detailDialog, "Invalid Base Price.", "Input Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                            loadCurrentBids();
+                        },
+                        () -> showMessageDialog(detailDialog, "Failed to update auction.", "Error", JOptionPane.ERROR_MESSAGE)
+                );
+            } catch (NumberFormatException ex) {
+                showMessageDialog(detailDialog, "Invalid Base Price.", "Input Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        deleteButton.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(detailDialog, "Delete this auction? This cannot be undone.",
+                    "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirm == JOptionPane.YES_OPTION) {
+                if (BackendClient.deleteAuction(auctionId)) {
+                    showMessageDialog(mainFrame, "Auction deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
+                    detailDialog.dispose();
+                    loadCurrentBids();
+                } else {
+                    showMessageDialog(detailDialog, "Failed to delete auction.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
-            });
+            }
+        });
 
-            deleteButton.addActionListener(e -> {
-                int confirm = JOptionPane.showConfirmDialog(detailDialog, "Delete this auction? This cannot be undone.",
-                        "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                if (confirm == JOptionPane.YES_OPTION) {
-                    if (BackendClient.deleteAuction(auctionId)) {
-                        showMessageDialog(mainFrame, "Auction deleted successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
-                        detailDialog.dispose();
-                        loadCurrentBids();
-                    } else {
-                        showMessageDialog(detailDialog, "Failed to delete auction.", "Error", JOptionPane.ERROR_MESSAGE);
-                    }
-                }
-            });
+        endBidButton.addActionListener(e -> {
+            int confirm = JOptionPane.showConfirmDialog(detailDialog, "End this auction and determine winner?",
+                    "Confirm Close", JOptionPane.YES_NO_OPTION);
+            if (confirm == JOptionPane.YES_OPTION) {
+                BackendClient.closeAuction(auctionId).ifPresentOrElse(
+                        res -> {
+                            showMessageDialog(mainFrame, "Auction closed successfully. Winner has been notified.",
+                                    "Success", JOptionPane.INFORMATION_MESSAGE);
+                            detailDialog.dispose();
+                            loadCurrentBids();
+                        },
+                        () -> showMessageDialog(detailDialog, "Failed to close auction. Ensure bids exist.",
+                                "Error", JOptionPane.ERROR_MESSAGE)
+                );
+            }
+        });
 
-            endBidButton.addActionListener(e -> {
-                int confirm = JOptionPane.showConfirmDialog(detailDialog, "End this auction and determine winner?",
-                        "Confirm Close", JOptionPane.YES_NO_OPTION);
-                if (confirm == JOptionPane.YES_OPTION) {
-                    BackendClient.closeAuction(auctionId).ifPresentOrElse(
-                            res -> {
-                                showMessageDialog(mainFrame, "Auction closed successfully. Winner has been notified.",
-                                        "Success", JOptionPane.INFORMATION_MESSAGE);
-                                detailDialog.dispose();
-                                loadCurrentBids();
-                            },
-                            () -> showMessageDialog(detailDialog, "Failed to close auction. Ensure bids exist.",
-                                    "Error", JOptionPane.ERROR_MESSAGE)
-                    );
-                }
-            });
+        buttonPanel.add(updateButton);
+        buttonPanel.add(deleteButton);
+        buttonPanel.add(endBidButton);
+        detailDialog.add(buttonPanel, BorderLayout.SOUTH);
 
-            buttonPanel.add(updateButton);
-            buttonPanel.add(deleteButton);
-            buttonPanel.add(endBidButton);
-            detailDialog.add(buttonPanel, BorderLayout.SOUTH);
+    }, () -> showMessageDialog(mainFrame, "Failed to load auction details.", "Error", JOptionPane.ERROR_MESSAGE));
 
-        }, () -> showMessageDialog(mainFrame, "Failed to load auction details.", "Error", JOptionPane.ERROR_MESSAGE));
+    detailDialog.setVisible(true);
+}
 
-        detailDialog.setVisible(true);
-    }
 
     // --- TABLE BUTTON RENDERER ---
     class ButtonRenderer extends JButton implements TableCellRenderer {
