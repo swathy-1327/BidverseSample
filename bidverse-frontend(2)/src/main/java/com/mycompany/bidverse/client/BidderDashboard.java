@@ -117,11 +117,13 @@ public class BidderDashboard extends JPanel {
 
         // Fetch My Bids Panel
         new Thread(() -> {
+            if(AuthService.getCurrentBidderId()!=null){
             List<BidDto> myBids = apiClient.getMyBids(AuthService.getCurrentBidderId());
             SwingUtilities.invokeLater(() -> {
                 JPanel myBidsPanel = createMyBidsPanel(myBids);
                 contentPanel.add(myBidsPanel, "MyBids");
-            });
+            
+            });}
         }).start();
 
         // Fetch Won Auctions Panel
@@ -305,11 +307,22 @@ public class BidderDashboard extends JPanel {
             panel.add(emptyMsg);
         } else {
             for (BidDto bid : wonBids) {
+                System.out.println(
+    "Bid Details → " +
+    "bidId=" + bid.getBidId() + ", " +
+    "auctionItemId=" + bid.getAuctionItemId() + ", " +
+    "bidderId=" + bid.getBidderId() + ", " +
+    "bidAmount=" + bid.getBidAmount() + ", " +
+    "bidTime=" + bid.getBidTime() + ", " +
+    "auctionTitle=" + bid.auctionTitle + ", " +
+    "status=" + bid.status
+);
+
+                System.out.println(bid.getAuctionItemId()+"pppp");
+                AuctionItemDto auc=apiClient.getAuctionId(bid.getAuctionItemId()).get();
                 JTextArea text = new JTextArea(
-                    bid.getAuctionTitle() + "\n" +
-                    "Amount: " + formatCurrency(bid.getBidAmount()) + "\n" +
-                    "Status: " + bid.getStatus()
-                );
+                    auc.getTitle()+ "\n" +
+                    "Amount: " + formatCurrency(bid.getBidAmount()) + "\n" );
                 text.setFont(new Font("Segoe UI", Font.PLAIN, 18));
                 text.setEditable(false);
                 text.setOpaque(false);

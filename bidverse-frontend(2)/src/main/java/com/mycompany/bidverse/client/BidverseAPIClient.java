@@ -260,7 +260,7 @@ public Double getHighestBid(Long auctionId) {
     public List<BidDto> getWonBids(Long bidderId) {
         try {
             System.out.println("API Client: Fetching won auctions for bidder " + bidderId);
-            String json = sendRequest("/auction/bidder/won/" + AuthService.getCurrentBidderId(), "GET", null);
+            String json = sendRequest("/bids/bidder/won/" + AuthService.getCurrentBidderId(), "GET", null);
             return parseJsonToList(json, BidDto.class);
         } catch (Exception e) {
             System.err.println("API Client Failed to fetch won bids. Falling back to dummy data. Error: " + e.getMessage());
