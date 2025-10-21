@@ -608,9 +608,12 @@ private void showDetailsFromDto(AuctionItemDto dto) {
     // Show loading text while image loads
     imageLabel.setIcon(null);
     imageLabel.setText("Loading image...");
+    BigDecimal highest=apiClient.getHighestBid(dto.getAuctionId()).get().getBidAmount();
+    Double doub=highest.doubleValue();
+    System.out.println("Highest:"+highest+"\n"+doub);
 
     detailBasePrice.setText("Base: " + formatCurrency(BigDecimal.valueOf(dto.getBasePrice())));
-    detailHighestBid.setText("Highest: " + formatCurrency(BigDecimal.valueOf(dto.getHighestBid())));
+    detailHighestBid.setText("Highest: $" + String.format("%.2f", doub));
     detailEndsIn.setText("Ends in: " + dto.getEndsIn());
     statusLabel.setText("Status: " + dto.getStatus());
 }

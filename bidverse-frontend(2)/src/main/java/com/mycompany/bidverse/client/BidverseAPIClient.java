@@ -198,6 +198,27 @@ public class BidverseAPIClient {
             return Optional.of(dto);
         }
     }
+    
+    /**
+ * GET /auction/{auctionId}/highest - Fetches the highest bid for a specific auction.
+ */
+public Optional<BidDto> getHighestBid(Long auctionId) {
+    try {
+        System.out.println("API Client: Fetching highest bid for auction ID " + auctionId);
+        String json = sendRequest("/bids/auction/" + auctionId + "/highest", "GET", null);
+        BidDto result = parseJsonToObject(json, BidDto.class);
+        return Optional.ofNullable(result);
+    } catch (Exception e) {
+        System.err.println("API Client Failed to fetch highest bid for auction " + auctionId + ". Falling back to dummy data. Error: " + e.getMessage());
+        // Optional fallback: return dummy bid with zero amount
+        BidDto dummyBid = new BidDto();
+        dummyBid.setAuctionItemId(auctionId);
+        dummyBid.setBidAmount(BigDecimal.ZERO);
+        dummyBid.status = "No Bids";
+        return Optional.of(dummyBid);
+    }
+}
+
 
     /**
      * GET /bids/bidder/{bidderId} - Fetches all bids placed by the user.
