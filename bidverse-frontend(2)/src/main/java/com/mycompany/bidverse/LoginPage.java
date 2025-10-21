@@ -84,7 +84,8 @@ public class LoginPage extends JPanel {
         boolean ok = AuthService.login(email, password);
 
         if (ok) {
-            // Retrieve the role from the static field set by AuthService
+            Main.email = email;
+            Main.idInitialize();
             String userRole = AuthService.getCurrentUserRole();
 
             // Clear fields after successful login
@@ -111,7 +112,7 @@ public class LoginPage extends JPanel {
                 navigator.showCard("bidderdashboard");
             } else if ("seller".equalsIgnoreCase(userRole)) {
                 // Assuming your Seller Dashboard card name is "seller_dashboard"
-                navigator.showCard("seller_dashboard");
+                navigator.showCard("sellerhome");
             } else {
                 // Default action if role is missing or unexpected
                 navigator.closeAppWithSuccess("Login successful, but role is undetermined.");

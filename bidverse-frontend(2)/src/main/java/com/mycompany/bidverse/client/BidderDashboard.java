@@ -22,6 +22,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
+import com.mycompany.bidverse.client.dto.AuctionItemDto;
+
 public class BidderDashboard extends JPanel {
 
     // --- Core Fields ---
@@ -112,7 +114,7 @@ public class BidderDashboard extends JPanel {
 
         // Fetch My Bids Panel
         new Thread(() -> {
-            List<BidDto> myBids = apiClient.getMyBids(currentBidderId);
+            List<BidDto> myBids = apiClient.getMyBids(AuthService.getCurrentBidderId());
             SwingUtilities.invokeLater(() -> {
                 JPanel myBidsPanel = createMyBidsPanel(myBids);
                 contentPanel.add(myBidsPanel, "MyBids");
@@ -121,7 +123,7 @@ public class BidderDashboard extends JPanel {
 
         // Fetch Won Auctions Panel
         new Thread(() -> {
-            List<BidDto> wonBids = apiClient.getWonBids(currentBidderId);
+            List<BidDto> wonBids = apiClient.getWonBids(AuthService.getCurrentBidderId());
             SwingUtilities.invokeLater(() -> {
                 JPanel wonPanel = createWonPanel(wonBids);
                 contentPanel.add(wonPanel, "Won");
@@ -182,7 +184,7 @@ public class BidderDashboard extends JPanel {
 
         // Fetch My Bids Panel
         new Thread(() -> {
-            List<BidDto> myBids = apiClient.getMyBids(currentBidderId);
+            List<BidDto> myBids = apiClient.getMyBids(AuthService.getCurrentBidderId());
             SwingUtilities.invokeLater(() -> {
                 JPanel myBidsPanel = createMyBidsPanel(myBids);
                 // Find the content panel and add my bids panel
@@ -200,7 +202,7 @@ public class BidderDashboard extends JPanel {
 
         // Fetch Won Auctions Panel
         new Thread(() -> {
-            List<BidDto> wonBids = apiClient.getWonBids(currentBidderId);
+            List<BidDto> wonBids = apiClient.getWonBids(AuthService.getCurrentBidderId());
             SwingUtilities.invokeLater(() -> {
                 JPanel wonPanel = createWonPanel(wonBids);
                 // Find the content panel and add won panel
@@ -264,9 +266,9 @@ public class BidderDashboard extends JPanel {
         } else {
             for (BidDto bid : bids) {
                 JTextArea text = new JTextArea(
-                    bid.getAuctionTitle() + "\n" +
+                    apiClient.getAuctionId(bid.getAuctionItemId()).get().getTitle()+ "\n" +
                     "Amount: " + formatCurrency(bid.getBidAmount()) + "\n" +
-                    "Status: " + bid.getStatus()
+                    "Status: " + apiClient.getAuctionId(bid.getAuctionItemId()).get().getStatus()
                 );
                 text.setFont(new Font("Segoe UI", Font.PLAIN, 18));
                 text.setEditable(false);
@@ -527,7 +529,8 @@ public class BidderDashboard extends JPanel {
     }
 
     private void placeBidFlow() {
-        System.out.println(AuthService.getCurrentBidderId()+"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        System.out.println(currentAuctionId+"fffffffffffffff\n");
+        System.out.println(AuthService.getCurrentBidderId()+"eeeeeeeeee");
         if (currentAuctionId == null || AuthService.getCurrentBidderId() == null) {
             JOptionPane.showMessageDialog(this, "Please select an auction and log in.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
@@ -562,7 +565,9 @@ public class BidderDashboard extends JPanel {
                     if (savedBid.isPresent()) {
                         JOptionPane.showMessageDialog(this, "Bid of " + formatCurrency(bidAmount) + " placed successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
                         refreshSelectedAuctionDetails();
+                        refreshMyBidsPanel(); // <--- added line
                     }
+
                 });
             } catch (RuntimeException rex) {
                 // This catches business logic errors thrown by your API client (e.g., bid too low, auction closed)
@@ -646,6 +651,26 @@ public class BidderDashboard extends JPanel {
 
         dialog.setVisible(true);
     }
+
+    private void refreshMyBidsPanel() {
+    new Thread(() -> {
+        System.out.println("Refreshing My Bids Panel..."+currentBidderId);
+        List<BidDto> myBids = apiClient.getMyBids(AuthService.getCurrentBidderId());
+        SwingUtilities.invokeLater(() -> {
+            JPanel myBidsPanel = createMyBidsPanel(myBids);
+
+            // Locate the content panel
+            Component[] components = getComponents();
+            if (components.length > 0 && components[0] instanceof JPanel mainPanel) {
+                Component[] mainComponents = mainPanel.getComponents();
+                if (mainComponents.length > 1 && mainComponents[1] instanceof JPanel contentPanel) {
+                    contentPanel.add(myBidsPanel, "MyBids");
+                }
+            }
+        });
+    }).start();
+}
+
 
     // --- Utility UI Methods & Minor Dummy Logic (QR Code) ---
 

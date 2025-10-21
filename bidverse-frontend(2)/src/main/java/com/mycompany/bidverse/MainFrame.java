@@ -33,6 +33,8 @@ public class MainFrame extends JFrame {
         BidderRegisterPage bidder = new BidderRegisterPage(this);
         SellerRegisterPage seller = new SellerRegisterPage(this);
         BidderDashboard bidderdashboard=new BidderDashboard(this);
+        SellerHome sellerHome = new SellerHome(this);
+
         // ADD intro card first
         cards.add(intro, "intro");
 
@@ -41,6 +43,8 @@ public class MainFrame extends JFrame {
         cards.add(bidder, "bidder");
         cards.add(seller, "seller");
         cards.add(bidderdashboard, "bidderdashboard");
+        cards.add(sellerHome, "sellerhome");
+
         add(cards);
 
         // SHOW intro card first

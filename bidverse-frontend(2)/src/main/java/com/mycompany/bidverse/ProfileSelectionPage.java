@@ -1,5 +1,5 @@
-package com.mycompany.bidverse;
 
+package com.mycompany.bidverse;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.awt.event.MouseAdapter;
