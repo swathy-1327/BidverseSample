@@ -787,15 +787,20 @@ private void showDetailsFromDto(AuctionItemDto dto) {
         detailBasePrice.setText("Base: Not available");
     }
     
-    
-        BigDecimal highest=apiClient.getHighestBid(dto.getAuctionId()).get().getBidAmount();
-    if (highest != null) {
-        Double doub=highest.doubleValue();
-        System.out.println("Highest:"+highest+"\n"+doub);
-        detailHighestBid.setText("Highest: $" + String.format("%.2f", doub));
-    } else {
-        detailHighestBid.setText("Highest: No bids yet");
-    }
+    Long curr = dto.getAuctionId();
+System.out.println(curr + " ddddddddddddddddddd");
+BigDecimal highest = BigDecimal.ZERO;
+
+if (curr != null) {
+    Optional<BidDto> bidOptional = apiClient.getHighestBid(curr);
+    highest = bidOptional.map(BidDto::getBidAmount).orElse(BigDecimal.ZERO);
+}
+
+System.out.println("Highest:" + highest);
+detailHighestBid.setText(highest.compareTo(BigDecimal.ZERO) > 0
+    ? "Highest: $" + String.format("%.2f", highest.doubleValue())
+    : "Highest: No bids yet");
+
     
     if (dto.getEndsIn() != null) {
         detailEndsIn.setText("Ends in: " + dto.getEndsIn());
