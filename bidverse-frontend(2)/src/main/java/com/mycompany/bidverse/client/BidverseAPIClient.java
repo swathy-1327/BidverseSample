@@ -201,7 +201,8 @@ public class BidverseAPIClient {
         }
     }
     
-    /**
+
+/**
  * GET /auction/{auctionId}/highest - Fetches the highest bid for a specific auction.
  */
 /**
@@ -210,7 +211,8 @@ public class BidverseAPIClient {
 /**
  * GET /bids/auction/{auctionId}/highest - Gets the highest bid for an auction
  */
-public Double getHighestBid(Long auctionId) {
+
+/*public Double getHighestBid(Long auctionId) {
     try {
         System.out.println("API Client: Getting highest bid for auction " + auctionId);
         String json = sendRequest("/bids/auction/" + auctionId + "/highest", "GET", null);
@@ -231,6 +233,23 @@ public Double getHighestBid(Long auctionId) {
     } catch (Exception e) {
         System.err.println("API Client Failed to get highest bid: " + e.getMessage());
         return null;
+    }
+}*/
+
+public Optional<BidDto> getHighestBid(Long auctionId) {
+    try {
+        System.out.println("API Client: Fetching highest bid for auction ID " + auctionId);
+        String json = sendRequest("/bids/auction/" + auctionId + "/highest", "GET", null);
+        BidDto result = parseJsonToObject(json, BidDto.class);
+        return Optional.ofNullable(result);
+    } catch (Exception e) {
+        System.err.println("API Client Failed to fetch highest bid for auction " + auctionId + ". Falling back to dummy data. Error: " + e.getMessage());
+        // Optional fallback: return dummy bid with zero amount
+        BidDto dummyBid = new BidDto();
+        dummyBid.setAuctionItemId(auctionId);
+        dummyBid.setBidAmount(BigDecimal.ZERO);
+        dummyBid.status = "No Bids";
+        return Optional.of(dummyBid);
     }
 }
 
